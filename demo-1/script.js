@@ -6,8 +6,8 @@ window.addEventListener('load', function load(ev) {
 function main() {
     const canvas = document.getElementById('canvasEl')
 
-    const gl = canvas.getContext('webgl')
-        || canvas.getContext('experimental-webgl')
+    const gl = canvas.getContext('webgl') ||
+        canvas.getContext('experimental-webgl')
 
     if (!gl) {
         const mess = 'Browser does not support WebGl'
@@ -25,18 +25,24 @@ function main() {
 
     const vsSource = `
         attribute vec4 aVertexPosition;
+        attribute vec4 aVertexColor;
 
         uniform mat4 uModelViewMatrix;
         uniform mat4 uProjectionMatrix;
 
+        varying lowp vec4 vColor;
+
         void main(){
             gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+            vColor = aVertexColor;
         }
     `;
 
     const fsSource = `
+        varying lowp vec4 vColor;
+
         void main() {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            gl_FragColor = vColor;
         }
     `;
 
@@ -45,7 +51,8 @@ function main() {
     const programInfo = {
         program: shaderProgram,
         attribLocations: {
-            vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition')
+            vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+            vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor')
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
@@ -77,6 +84,7 @@ function initShaderProgram(gl, vsSource, fsSource) {
     return shaderProgram;
 }
 
+
 function loadShader(gl, type, source) {
     const shader = gl.createShader(type);
 
@@ -95,18 +103,28 @@ function initBuffers(gl) {
     const positionBuffer = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-    const positions = [
-        -1.0, 1.0,
-        1.0, 1.0,
-        -1.0, -1.0,
+    const positions = [-1.0, 1.0,
+        1.0, 1.0, -1.0, -1.0,
         1.0, -1.0,
-        
+
     ];
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
+    const colors = [
+        1.0, 1.0, 1.0, 1.0, // white
+        1.0, 0.0, 0.0, 1.0, // red
+        0.0, 1.0, 0.0, 1.0, // green
+        0.0, 0.0, 1.0, 1.0, // blue
+    ];
+
+    const colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
     return {
-        position: positionBuffer
+        position: positionBuffer,
+        color: colorBuffer
     }
 }
 
@@ -130,17 +148,34 @@ function drawScene(gl, programInfo, buffers) {
     const modelViewMatrix = mat4.create()
     mat4.translate(modelViewMatrix, modelViewMatrix, [-0.0, 0.0, -6.0]);
 
-    const numComponents = 2;
-    const type = gl.FLOAT;
-    const normalize = false
-    const stride = 0;
-    const offset = 0;
+    {
+        const numComponents = 4;
+        const type = gl.FLOAT;
+        const normalize = false
+        const stride = 0;
+        const offset = 0;
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color)
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexColor,
+            numComponents,
+            type, normalize, stride, offset);
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+    }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position)
-    gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition,
-        numComponents,
-        type, normalize, stride, offset);
-    gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+    {
+        const numComponents = 2;
+        const type = gl.FLOAT;
+        const normalize = false
+        const stride = 0;
+        const offset = 0;
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position)
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition,
+            numComponents,
+            type, normalize, stride, offset);
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+    }
+
 
     // Tell WebGL to use our program when drawing
 

@@ -1,3 +1,5 @@
+let squareRotation = 0.0;
+
 window.addEventListener('load', function load(ev) {
     window.removeEventListener(ev.type, load, false);
     main();
@@ -62,6 +64,20 @@ function main() {
 
     const buffers = initBuffers(gl);
     drawScene(gl, programInfo, buffers);
+
+    let then = 0;
+
+    function render(now) {
+        now *= 0.001;
+        const delta = now - then;
+        then = now;
+
+        drawScene(gl, programInfo, buffers, delta);
+
+        requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
 }
 
 
@@ -129,7 +145,7 @@ function initBuffers(gl) {
 }
 
 
-function drawScene(gl, programInfo, buffers) {
+function drawScene(gl, programInfo, buffers, deltaTime=0) {
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
@@ -154,7 +170,7 @@ function drawScene(gl, programInfo, buffers) {
         const normalize = false
         const stride = 0;
         const offset = 0;
-    
+
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color)
         gl.vertexAttribPointer(programInfo.attribLocations.vertexColor,
             numComponents,
@@ -168,12 +184,21 @@ function drawScene(gl, programInfo, buffers) {
         const normalize = false
         const stride = 0;
         const offset = 0;
-    
+
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position)
         gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition,
             numComponents,
             type, normalize, stride, offset);
         gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+    }
+
+    {
+
+        squareRotation += deltaTime;
+
+        mat4.rotate(modelViewMatrix,
+            modelViewMatrix,
+            squareRotation, [0, 0, 1]);
     }
 
 

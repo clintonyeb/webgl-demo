@@ -224,6 +224,7 @@ function drawScene(gl, programInfo, buffers, deltaTime=0) {
     }
 }
 
+// radian function
 function rad(n) {
     return n * Math.PI / 180;
 }

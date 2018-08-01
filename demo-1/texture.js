@@ -27,24 +27,26 @@ function main() {
 
     const vsSource = `
         attribute vec4 aVertexPosition;
-        attribute vec4 aVertexColor;
+        attribute vec2 aTextureCord;
 
         uniform mat4 uModelViewMatrix;
         uniform mat4 uProjectionMatrix;
 
-        varying lowp vec4 vColor;
+        varying highp vec2 vTextureCord;
 
         void main(){
             gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-            vColor = aVertexColor;
+            vTextureCord = aTextureCord;
         }
     `;
 
     const fsSource = `
-        varying lowp vec4 vColor;
+        varying highp vec2 vTextureCord;
+
+        uniform sampler2D uSampler;
 
         void main() {
-            gl_FragColor = vColor;
+            gl_FragColor = texture2D(uSampler, vTextureCord);
         }
     `;
 
@@ -54,16 +56,19 @@ function main() {
         program: shaderProgram,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-            vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor')
+            textureCord: gl.getAttribLocation(shaderProgram, 'aTextureCord')
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix')
+            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+            sampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
         }
     };
 
+    const texture = loadTexture(gl, 'simpson.jpg')
+
     const buffers = initBuffers(gl);
-    drawScene(gl, programInfo, buffers);
+    drawScene(gl, programInfo, buffers, texture);
 
     let then = 0;
 
@@ -72,14 +77,9 @@ function main() {
         const delta = now - then;
         then = now;
 
-        drawScene(gl, programInfo, buffers, delta);
+        drawScene(gl, programInfo, buffers, texture, delta);
 
         requestAnimationFrame(render);
-    }
-
-    {
-        const texture = loadTexture(gl, 'profile.jpg')
-        
     }
 
     requestAnimationFrame(render);
@@ -164,49 +164,113 @@ function initBuffers(gl) {
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-    const faceColors = [
-        [1.0,  1.0,  1.0,  1.0],    // Front face: white
-        [1.0,  0.0,  0.0,  1.0],    // Back face: red
-        [0.0,  1.0,  0.0,  1.0],    // Top face: green
-        [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-        [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-        [1.0,  0.0,  1.0,  1.0],    // Left face: purple
-    ];
+        const textureCordBuffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, textureCordBuffer)
 
-    let colors = []
+        const textureCoordinates = [
+            // Front
+    0.0,  0.0,
+    1.0,  0.0,
+    1.0,  1.0,
+    0.0,  1.0,
+    // Back
+    0.0,  0.0,
+    1.0,  0.0,
+    1.0,  1.0,
+    0.0,  1.0,
+    // Top
+    0.0,  0.0,
+    1.0,  0.0,
+    1.0,  1.0,
+    0.0,  1.0,
+    // Bottom
+    0.0,  0.0,
+    1.0,  0.0,
+    1.0,  1.0,
+    0.0,  1.0,
+    // Right
+    0.0,  0.0,
+    1.0,  0.0,
+    1.0,  1.0,
+    0.0,  1.0,
+    // Left
+    0.0,  0.0,
+    1.0,  0.0,
+    1.0,  1.0,
+    0.0,  1.0,
+        ];
 
-    for (let index = 0; index < faceColors.length; index++) {
-        const c = faceColors[index];
-        colors = colors.concat(c, c, c, c);
-    }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
-    const colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-        const indexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-        const indices = [
+    const indices = [
             0,  1,  2,      0,  2,  3,    // front
             4,  5,  6,      4,  6,  7,    // back
             8,  9,  10,     8,  10, 11,   // top
             12, 13, 14,     12, 14, 15,   // bottom
             16, 17, 18,     16, 18, 19,   // right
             20, 21, 22,     20, 22, 23,   // left
-          ];
+    ];
 
-          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+    const normalBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+
+  const vertexNormals = [
+    // Front
+     0.0,  0.0,  1.0,
+     0.0,  0.0,  1.0,
+     0.0,  0.0,  1.0,
+     0.0,  0.0,  1.0,
+
+    // Back
+     0.0,  0.0, -1.0,
+     0.0,  0.0, -1.0,
+     0.0,  0.0, -1.0,
+     0.0,  0.0, -1.0,
+
+    // Top
+     0.0,  1.0,  0.0,
+     0.0,  1.0,  0.0,
+     0.0,  1.0,  0.0,
+     0.0,  1.0,  0.0,
+
+    // Bottom
+     0.0, -1.0,  0.0,
+     0.0, -1.0,  0.0,
+     0.0, -1.0,  0.0,
+     0.0, -1.0,  0.0,
+
+    // Right
+     1.0,  0.0,  0.0,
+     1.0,  0.0,  0.0,
+     1.0,  0.0,  0.0,
+     1.0,  0.0,  0.0,
+
+    // Left
+    -1.0,  0.0,  0.0,
+    -1.0,  0.0,  0.0,
+    -1.0,  0.0,  0.0,
+    -1.0,  0.0,  0.0
+  ];
+
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals),
+                gl.STATIC_DRAW);
+
 
     return {
         position: positionBuffer,
-        color: colorBuffer,
+        textureCord: textureCordBuffer,
         indices: indexBuffer,
+        normals: normalBuffer,
     }
 }
 
 
-function drawScene(gl, programInfo, buffers, deltaTime=0) {
+function drawScene(gl, programInfo, buffers, texture, deltaTime=0) {
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
@@ -226,17 +290,17 @@ function drawScene(gl, programInfo, buffers, deltaTime=0) {
     mat4.translate(modelViewMatrix, modelViewMatrix, [-0.0, 0.0, -6.0]);
 
     {
-        const numComponents = 4;
+        const numComponents = 2;
         const type = gl.FLOAT;
         const normalize = false
         const stride = 0;
         const offset = 0;
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color)
-        gl.vertexAttribPointer(programInfo.attribLocations.vertexColor,
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCord)
+        gl.vertexAttribPointer(programInfo.attribLocations.textureCord,
             numComponents,
             type, normalize, stride, offset);
-        gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+        gl.enableVertexAttribArray(programInfo.attribLocations.textureCord);
     }
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices)
@@ -267,6 +331,24 @@ function drawScene(gl, programInfo, buffers, deltaTime=0) {
             cubicRotation * .7, [0, 1, 0]);
     }
 
+    {
+        const numComponents = 3;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
+    gl.vertexAttribPointer(
+        programInfo.attribLocations.vertexNormal,
+        numComponents,
+        type,
+        normalize,
+        stride,
+        offset);
+    gl.enableVertexAttribArray(
+        programInfo.attribLocations.vertexNormal);
+    }
+
 
     // Tell WebGL to use our program when drawing
 
@@ -289,6 +371,16 @@ function drawScene(gl, programInfo, buffers, deltaTime=0) {
         const type = gl.UNSIGNED_SHORT;
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
+
+    {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.uniform1i(programInfo.uniformLocations.sampler, 0)
+    }
+
+    {
+
+    }
 }
 
 // radian function
@@ -309,8 +401,27 @@ function loadTexture(gl, url) {
     const srcType = gl.UNSIGNED_BYTE
     
     const pixel = new Uint8Array([0, 0, 255, 255]);
-
     gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, srcFmt, srcType, pixel);
 
+    const image = new Image()
+    image.onload = function ($ev) {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFmt, srcType, image);
+
+        if(isPowerOf2(image.width) && isPowerOf2(image.height)){
+            gl.generateMipmap(gl.TEXTURE_2D)
+        } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+    };
+
+    image.src = url;
+
     return texture;
+}
+
+function isPowerOf2(value) {
+    return (value & (value-1) ) == 0;
 }

@@ -28,24 +28,40 @@ function main() {
     const vsSource = `
         attribute vec4 aVertexPosition;
         attribute vec2 aTextureCord;
+        attribute vec3 aVertexNormal;
 
         uniform mat4 uModelViewMatrix;
         uniform mat4 uProjectionMatrix;
+        uniform mat4 uNormalMatrix;
 
+        varying highp vec3 vLighting;
         varying highp vec2 vTextureCord;
 
         void main(){
             gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
             vTextureCord = aTextureCord;
+
+            // Apply lighting effect
+
+            highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+            highp vec3 directionalLightColor = vec3(1, 1, 1);
+            highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+
+            highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+
+            highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
+            vLighting = ambientLight + (directionalLightColor * directional);
         }
     `;
 
     const fsSource = `
         varying highp vec2 vTextureCord;
+        varying highp vec3 vLighting;
 
         uniform sampler2D uSampler;
 
         void main() {
+            highp vec4 texelColor = texture2D(uSampler, vTextureCord);
             gl_FragColor = texture2D(uSampler, vTextureCord);
         }
     `;
@@ -56,12 +72,14 @@ function main() {
         program: shaderProgram,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-            textureCord: gl.getAttribLocation(shaderProgram, 'aTextureCord')
+            textureCord: gl.getAttribLocation(shaderProgram, 'aTextureCord'),
+            vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
             sampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+            normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
         }
     };
 
@@ -289,6 +307,10 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime=0) {
     const modelViewMatrix = mat4.create()
     mat4.translate(modelViewMatrix, modelViewMatrix, [-0.0, 0.0, -6.0]);
 
+    const normalMatrix = mat4.create();
+    mat4.invert(normalMatrix, modelViewMatrix);
+    mat4.transpose(normalMatrix, normalMatrix);
+
     {
         const numComponents = 2;
         const type = gl.FLOAT;
@@ -304,20 +326,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime=0) {
     }
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices)
-
-    {
-        const numComponents = 3;
-        const type = gl.FLOAT;
-        const normalize = false
-        const stride = 0;
-        const offset = 0;
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position)
-        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition,
-            numComponents,
-            type, normalize, stride, offset);
-        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-    }
 
     {
         cubicRotation += deltaTime;
@@ -365,6 +373,11 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime=0) {
         false,
         modelViewMatrix);
 
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.normalMatrix,
+        false,
+        normalMatrix);
+
     {
         const offset = 0;
         const vertexCount = 36;
@@ -379,7 +392,17 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime=0) {
     }
 
     {
+        const numComponents = 3;
+        const type = gl.FLOAT;
+        const normalize = false
+        const stride = 0;
+        const offset = 0;
 
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position)
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition,
+            numComponents,
+            type, normalize, stride, offset);
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
     }
 }
 

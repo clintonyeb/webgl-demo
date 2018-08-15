@@ -62,3 +62,7 @@ function get_x_y(canvas, event) {
         x, y
     };
 }
+
+function rad(n) {
+    return Math.PI * n / 180.0;
+}

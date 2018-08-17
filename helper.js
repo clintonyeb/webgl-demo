@@ -19,8 +19,8 @@ function getWebGLContext(canvas) {
 }
 
 function initShaders(gl, vsSource, fsSource) {
-    const vertexShader = _loadShader(gl, gl.VERTEX_SHADER, vsSource);
-    const fragmentShader = _loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    const vertexShader = _loadShader(gl, gl.VERTEX_SHADER, vsSource, "vertex");
+    const fragmentShader = _loadShader(gl, gl.FRAGMENT_SHADER, fsSource, "fragment");
 
     // Create a shader
     const shaderProgram = gl.createProgram();
@@ -38,14 +38,14 @@ function initShaders(gl, vsSource, fsSource) {
     gl.program = shaderProgram;
 }
 
-function _loadShader(gl, type, source) {
+function _loadShader(gl, type, source, name="shader") {
     const shader = gl.createShader(type);
 
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
 
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        alert('Unable to compile shader: ' + gl.getShaderInfoLog(shader));
+        alert('Unable to compile shader: ' + name + '::: ' + gl.getShaderInfoLog(shader));
         return null;
     }
 
@@ -65,4 +65,8 @@ function get_x_y(canvas, event) {
 
 function rad(n) {
     return Math.PI * n / 180.0;
+}
+
+function isImageAPowerOf2(value) {
+    return (value & (value-1) ) == 0;
 }

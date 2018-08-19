@@ -13,6 +13,8 @@ function getWebGLContext(canvas) {
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    gl.enable(gl.DEPTH_TEST);
+    
     gl.clear(gl.COLOR_BUFFER_BIT)
 
     return gl;
@@ -69,4 +71,16 @@ function rad(n) {
 
 function isImageAPowerOf2(value) {
     return (value & (value-1) ) == 0;
+}
+
+function constrain (n, min, max) {
+    if (arguments.length == 2) {
+        max = min
+        min = 0
+    }
+    if (n < min) 
+        return min
+    if (n > max) 
+        return max
+    return n
 }

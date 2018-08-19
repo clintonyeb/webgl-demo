@@ -37,7 +37,7 @@ function main() {
   {
     const uViewMatrix = gl.getUniformLocation(gl.program, 'uViewMatrix');
     const viewMatrix = new Matrix4();
-    viewMatrix.setLookAt(0.20, 0.25, 0.25, 0, 0, 0, 0, 1, 0)
+    viewMatrix.setLookAt(0.2, 0.25, 0.25, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
     gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix.elements);
   }
 
@@ -76,9 +76,10 @@ function initVertexBuffer(gl) {
       const a_Color = gl.getAttribLocation(gl.program, 'a_Color');
       gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, 6 * FSIZE, 3 * FSIZE);
       gl.enableVertexAttribArray(a_Color);
+
+      // Unbind the buffer object
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
-  // Unbind the buffer object
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
   return numberOfVertices;
 }
